@@ -7,35 +7,40 @@ def compare_pdf(file1, file2, output_file):
     pdf1 = PyPDF2.PdfFileReader(open(file1, 'rb'))
     pdf2 = PyPDF2.PdfFileReader(open(file2, 'rb'))
 
-    page1 = pdf1.getPage(0)
-    page2 = pdf2.getPage(0)
+    output = PyPDF2.PdfFileWriter()
 
-    text1 = page1.extractText()
-    text2 = page2.extractText()
+    num_pages = min(pdf1.getNumPages(), pdf2.getNumPages())
 
-    diff = difflib.ndiff(text1.split(), text2.split())
-    changes = [line for line in diff if line.startswith('+') or line.startswith('-')]
+    for page_num in range(num_pages):
+        page1 = pdf1.getPage(page_num)
+        page2 = pdf2.getPage(page_num)
 
-    if len(changes) > 0:
-        c = canvas.Canvas(output_file, pagesize=page1.mediaBox)
-        c.setFillColor(yellow)
+        text1 = page1.extractText()
+        text2 = page2.extractText()
 
-        for change in changes:
-            if change.startswith('+'):
-                c.setFillColor('green')
-            elif change.startswith('-'):
-                c.setFillColor('red')
+        diff = difflib.ndiff(text1.split(), text2.split())
+        changes = [line for line in diff if line.startswith('+') or line.startswith('-')]
 
-            line = change[2:]
-            c.drawString(10, 10, line)  # Draw the changed line at the top-left corner
+        if len(changes) > 0:
+            c = canvas.Canvas(output_file, pagesize=page1.mediaBox)
+            c.setFillColor(yellow)
 
-        c.save()
-    else:
-        # If there are no changes, simply copy the page from the first PDF to the output PDF
-        output = PyPDF2.PdfFileWriter()
-        output.addPage(page1)
-        with open(output_file, 'wb') as f:
-            output.write(f)
+            for change in changes:
+                if change.startswith('+'):
+                    c.setFillColor('green')
+                elif change.startswith('-'):
+                    c.setFillColor('red')
+
+                line = change[2:]
+                c.drawString(10, 10, line)  # Draw the changed line at the top-left corner
+
+            c.save()
+            output.addPage(page2)
+        else:
+            output.addPage(page1)
+
+    with open(output_file, 'wb') as f:
+        output.write(f)
 
 # Usage
 file1 = 'file1.pdf'
