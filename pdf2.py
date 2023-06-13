@@ -15,6 +15,8 @@ def compare_pdf(file1, file2, output_file):
         page1 = pdf1.getPage(page_num)
         page2 = pdf2.getPage(page_num)
 
+        c = canvas.Canvas(output_file, pagesize=page2.mediaBox)
+
         text1 = page1.extractText()
         text2 = page2.extractText()
 
@@ -22,22 +24,22 @@ def compare_pdf(file1, file2, output_file):
         changes = [line for line in diff if line.startswith('+') or line.startswith('-')]
 
         if len(changes) > 0:
-            c = canvas.Canvas(output_file, pagesize=page1.mediaBox)
             c.setFillColor(yellow)
 
-            for change in changes:
-                if change.startswith('+'):
-                    c.setFillColor('green')
-                elif change.startswith('-'):
-                    c.setFillColor('red')
+            lines1 = text1.splitlines()
+            lines2 = text2.splitlines()
 
-                line = change[2:]
-                c.drawString(10, 10, line)  # Draw the changed line at the top-left corner
+            for line_num, (line1, line2) in enumerate(zip(lines1, lines2)):
+                diff = difflib.ndiff(line1.split(), line2.split())
+                changes = [change for change in diff if change.startswith('+') or change.startswith('-')]
+                if len(changes) > 0:
+                    y = page2.mediaBox[3] - (line_num * 12)  # Assuming a font size of 12
+                    c.rect(0, y, page2.mediaBox[2], y - 12, fill=True, stroke=False)
+                    c.drawString(10, y - 10, line2)  # Highlight the modified line
 
-            c.save()
-            output.addPage(page2)
-        else:
-            output.addPage(page1)
+        c.showPage()
+        c.save()
+        output.addPage(page2)
 
     with open(output_file, 'wb') as f:
         output.write(f)
