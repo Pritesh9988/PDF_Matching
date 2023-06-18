@@ -1,24 +1,39 @@
-import openpyxl
-from openpyxl.styles import PatternFill
+import fitz
+import difflib
 
-def highlight_cells_with_exceptions(file_path, sheet_name, column_letter, exception_values):
-    wb = openpyxl.load_workbook(file_path)
-    sheet = wb[sheet_name]
-    column = sheet[column_letter]
+def highlight_differences(file1, file2):
+    # Open the PDF files
+    pdf1 = fitz.open(file1)
+    pdf2 = fitz.open(file2)
 
-    red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+    # Iterate through the pages of the second PDF
+    for page_num in range(len(pdf2)):
+        page2 = pdf2[page_num]
+        page1 = pdf1[page_num]
 
-    for cell in column:
-        if cell.value not in exception_values:
-            cell.fill = red_fill
+        # Get the text from both pages
+        text1 = page1.get_text("text")
+        text2 = page2.get_text("text")
 
-    wb.save(file_path)
-    wb.close()
+        # Perform text comparison
+        differ = difflib.Differ()
+        diff = differ.compare(text1.split(), text2.split())
 
-# Example usage
-file_path = 'example.xlsx'  # Replace with your file path
-sheet_name = 'Sheet1'  # Replace with your sheet name
-column_letter = 'A'  # Replace with your column letter
-exception_values = [1, 3, 5]  # Replace with your exception values
+        # Highlight the differences on the second page
+        for line in diff:
+            if line.startswith('+'):
+                word2 = line[2:]
+                for span in page2.search_for(word2):
+                    page2.add_highlight_annot(span)
 
-highlight_cells_with_exceptions(file_path, sheet_name, column_letter, exception_values)
+    # Save the modified PDF
+    output_path = "highlighted_differences.pdf"
+    pdf2.save(output_path)
+    pdf2.close()
+
+    print(f"Differences highlighted in {output_path}")
+
+# Compare two PDF files and highlight differences in the second PDF
+file1 = "file1.pdf"
+file2 = "file2.pdf"
+highlight_differences(file1, file2)
