@@ -9,26 +9,28 @@ def highlight_differences(file1, file2):
     # Iterate through the pages of the second PDF
     for page_num in range(len(pdf2)):
         page2 = pdf2[page_num]
-        page1 = pdf1[page_num]
 
         # Get the text from both pages
-        text1 = page1.get_text("text")
+        text1 = pdf1[page_num].get_text("text")
         text2 = page2.get_text("text")
 
-        # Perform text comparison
+        # Compare the text using difflib
         differ = difflib.Differ()
         diff = differ.compare(text1, text2)
 
-        # Highlight the first occurrence of each difference on the second page
+        # Track the positions of differences
+        diff_positions = []
         pos2 = 0
         for line in diff:
-            if line.startswith('+'):
-                word2 = line[2:]
-                start = text2.find(word2, pos2)
-                if start != -1:
-                    end = start + len(word2)
-                    page2.add_highlight_annot(fitz.Rect(start, 0, end, 0))
-                    pos2 = end
+            if line.startswith('-') or line.startswith('+'):
+                diff_positions.append(pos2)
+            if not line.startswith('-'):
+                pos2 += len(line[2:])
+
+        # Highlight the positions of differences on the second page
+        for pos in diff_positions:
+            highlight_rect = [pos, 0, pos+1, 1]  # Modify the height as needed
+            page2.add_highlight_annot(highlight_rect)
 
     # Save the modified PDF
     output_path = "highlighted_differences.pdf"
@@ -37,7 +39,7 @@ def highlight_differences(file1, file2):
 
     print(f"Differences highlighted in {output_path}")
 
-# Compare two PDF files and highlight differences in the second PDF
+# Compare two PDF files and highlight the positions of differences in the second PDF
 file1 = "path/to/file1.pdf"
 file2 = "path/to/file2.pdf"
 highlight_differences(file1, file2)
